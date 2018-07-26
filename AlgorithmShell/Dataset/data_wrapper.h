@@ -38,7 +38,7 @@ namespace dw {
             {
 
             }
-            virtual const std::type_info & type_info() const
+            virtual const std::type_info& type_info() const
             {
                 return typeid(T);
             }
@@ -50,7 +50,6 @@ namespace dw {
 
     protected:
         placeholder* content;
-        //const char* _content;
     public:
         data_wrapper() : content(NULL)
         {
@@ -105,30 +104,33 @@ namespace dw {
         // Template operation
 
         template< typename T >
-        bool istype()
+        bool istype() const
         {
             data_holder< T >* holder = dynamic_cast<data_holder< T >*>(content);
             return (holder != NULL);
         }
 
         template< typename T >
-        bool set(T t)
+        bool set(T val)
         {
             data_holder< T >* holder = dynamic_cast<data_holder< T >*>(content);
-            if (holder != NULL) { holder->set(t); return true; }
+            if (holder != NULL) { holder->value = val; return true; }
             else { return false; }
         }
-        bool set(const data_wrapper& t)
+
+        bool set(const data_wrapper& val)
         {
-            data_wrapper dw(t);
+            data_wrapper dw(val);
             swap(dw);
             return true;
         }
+
         template< typename T >
         bool check(const T& expect)
         {
             return ((type_info() == typeid(T) && value_as< T >() == expect));
         }
+
         bool check(const char* expect)
         {
             bool ret = false;
@@ -145,34 +147,20 @@ namespace dw {
         }
 
         template< typename T >
-        T* pointer_as()
+        T* pointer_as() const
         {
-            //if (typeid(T) == typeid(const char*))
-            //{
-            //	std::string* val = pointer_as< std::string >();
-            //	_content = (val != NULL ? val->c_str() : NULL);
-            //	return (T*)&_content;
-            //}
-
-            //if (content != NULL)
-            //{
-            //	const char* content_type = content->type_info().name();
-            //	const char* function_type = typeid(T).name();
-            //	(void)(content_type, function_type, "For debug.");
-            //}
-
             return ((content != NULL) && (content->type_info() == typeid(T))) ?
                 &(static_cast<data_holder< T >*>(content))->value : NULL;
         }
 
         template< typename T >
-        T value_as()
+        T value_as() const
         {
             return value_as(T());
         }
 
         template< typename T >
-        T value_as(T default_val)
+        T value_as(T default_val) const
         {
             T* val = pointer_as< T >();
             return (val != NULL ? (*val) : default_val);
@@ -180,7 +168,6 @@ namespace dw {
     };
 
     typedef data_wrapper any;
-
 }
 
 #endif // DATA_WRAPPER_H_

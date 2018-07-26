@@ -67,20 +67,23 @@ protected:
 
 class Dataset
 {
+public:
+    typedef std::vector< std::string > KEYLIST;
 protected:
     typedef std::map< std::string, dw::any* > DATAPTDICT;
 protected:
     bool m_lockType;
     DATAPTDICT m_dataDict;
-    ObserverOrganizer m_obOrganizer;
+    ObserverOrganizer* m_obOrganizer;
 
 public:
-    Dataset();
+    Dataset(bool enableOb = true);
     ~Dataset();
 
     void clear();
     void lockType(bool lock);
 
+    KEYLIST keys() const;
     dw::any get(std::string key) const;
     bool get(std::string key, dw::any& value) const;
     bool set(std::string key, const dw::any& value);
@@ -97,6 +100,8 @@ public:
         return ret;
     }
     bool check(std::string key, const char* expect) const;
+
+    bool exists(std::string key) const;
 
     bool addDataObserver(std::string key, IDataObserver* ob);
     void removeDataObserver(IDataObserver* ob);

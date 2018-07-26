@@ -194,15 +194,19 @@ std::deque< IDataObserver* >* ObserverOrganizer::findObserverQueue(const std::st
 
 
 
-Dataset::Dataset()
+Dataset::Dataset(bool enableOb) : m_lockType(true), m_obOrganizer(NULL)
 {
-    m_lockType = true;
+    if (enableOb)
+    {
+        m_obOrganizer = new ObserverOrganizer;
+    }
 }
 
 
 Dataset::~Dataset()
 {
-
+    delete m_obOrganizer;
+    m_obOrganizer = NULL;
 }
 
 void Dataset::clear()
@@ -223,6 +227,22 @@ void Dataset::clear()
 void Dataset::lockType(bool lock)
 {
     m_lockType = lock;
+}
+
+
+Dataset::KEYLIST Dataset::keys() const
+{
+    KEYLIST keys;
+    requestDataAccess();
+
+    auto iter = m_dataDict.begin();
+    for (; iter != m_dataDict.end(); ++iter)
+    {
+        keys.push_back((*iter).first);
+    }
+
+    releaseDataAccess();
+    return keys;
 }
 
 dw::any Dataset::get(std::string key) const
@@ -311,33 +331,47 @@ bool Dataset::check(std::string key, const char* expect) const
     return ret;
 }
 
+bool Dataset::exists(std::string key) const
+{
+    requestDataAccess();
+    bool ret = (m_dataDict.find(key) != m_dataDict.end());
+    releaseDataAccess();
+    return ret;
+}
+
 bool Dataset::addDataObserver(std::string key, IDataObserver* ob)
 {
     bool ret = false;
-    requestDataAccess();
-
-    if ((!key.empty()) && (ob != NULL))
+    if (m_obOrganizer != NULL)
     {
-        ret = m_obOrganizer.addObserverTo(ob, key);
-        if (ret)
+        requestDataAccess();
+
+        if ((!key.empty()) && (ob != NULL))
         {
-            dw::any* data = find(key);
-            if (data != NULL)
+            ret = m_obOrganizer->addObserverTo(ob, key);
+            if (ret)
             {
-                dw::any value(*data);
-                ob->onFirstData(key, value);
+                dw::any* data = find(key);
+                if (data != NULL)
+                {
+                    dw::any value(*data);
+                    ob->onFirstData(key, value);
+                }
             }
         }
-    }
 
-    releaseDataAccess();
+        releaseDataAccess();
+    }
     return ret;
 }
 void Dataset::removeDataObserver(IDataObserver* ob)
 {
-    requestDataAccess();
-    m_obOrganizer.removeObserver(ob);
-    releaseDataAccess();
+    if (m_obOrganizer != NULL)
+    {
+        requestDataAccess();
+        m_obOrganizer->removeObserver(ob);
+        releaseDataAccess();
+    }
 }
 
 // protected:
@@ -353,11 +387,17 @@ bool Dataset::releaseDataAccess() const
 
 void Dataset::addUpdate(const std::string& key, const dw::any& value)
 {
-    m_obOrganizer.addUpdate(key, value);
+    if (m_obOrganizer != NULL)
+    {
+        m_obOrganizer->addUpdate(key, value);
+    }
 }
 void Dataset::commitUpdates()
 {
-    m_obOrganizer.flushUpdatesToObservers();
+    if (m_obOrganizer != NULL)
+    {
+        m_obOrganizer->flushUpdatesToObservers();
+    }
 }
 
 dw::any* Dataset::find(const std::string& key) const

@@ -2,6 +2,9 @@
 #define _ALGORITHM_SHELL_SLEEPY_H_
 
 #include <map>
+#include <tuple>
+#include <mutex>
+#include <thread>
 #include <vector>
 #include <string>
 #include <assert.h>
@@ -126,5 +129,62 @@ public:
 
     }
 };
+
+
+// TODO: We need a data cache for nest invoking. Not an autowriter, which is a bad design.
+
+
+// ------------------- Auto Writer -------------------
+
+//class writerbase
+//{
+//public:
+//    writerbase() { };
+//    virtual ~writerbase() { };
+//
+//    virtual void write() = 0;
+//};
+
+//template< typename T >
+//class autowriter : public writerbase
+//{
+//protected:
+//    T& m_any;
+//    Dataset& m_ds;
+//    std::string m_key;
+//    const char* m_algorithm;
+//public:
+//    anywriter(Dataset& ds, std::string key, T& any, const char* algorithm)
+//        : m_any(any), m_ds(ds), m_key(key), m_algorithm(algorithm)
+//    {
+//
+//    }
+//    virtual ~anywriter()
+//    {
+//        write();
+//    }
+//
+//    virtual void write()
+//    {
+//        m_ds.set(m_key, dw::any(m_any));
+//    }
+//
+//protected:
+//    typedef std::tuple< const char*, writerbase* > datactx;
+//    typedef std::list< datactx > callctx;
+//    typedef std::map< thread::id, callctx > callmap;
+//
+//    static std::mutex m_lock = std::mutex();
+//    static callmap m_callmap = callmap();
+//
+//    static void enter(writerbase* writer);
+//    static void leave(writerbase* writer);
+//
+//    static void lock() { m_lock.lock(); };
+//    static void unlock() { m_lock.unlock(); };
+//
+//    static bool checkflush();
+//    static void flushupdates();
+//};
 
 #endif // _ALGORITHM_SHELL_SLEEPY_H_

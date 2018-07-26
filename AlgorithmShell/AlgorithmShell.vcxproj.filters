@@ -32,5 +32,8 @@
     <ClInclude Include="Dataset\dataset.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Dataset\ambiguous.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlgorithmShell.h" />
+    <ClInclude Include="Dataset\ambiguous.h" />
     <ClInclude Include="Dataset\dataset.h" />
     <ClInclude Include="Dataset\data_wrapper.h" />
   </ItemGroup>
