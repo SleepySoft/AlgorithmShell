@@ -86,18 +86,44 @@ protected:
 };
 
 
+class anywriterif;
+class anycache
+{
+protected:
+    std::vector< anywriterif* > m_caches;
+protected:
+    anycache();
+    ~anycache();
+public:
+    static anycache& getInstance();
+public:
+    void registerWriter(anywriterif* writer);
+    void unregisterWriter(anywriterif* writer);
+    bool getCachedData(const std::string& key, dw::any& any) const;
+};
 
 template< typename T >
 T anyloader(Dataset& ds, std::string key, const char* errmsg)
 {
     dw::any any;
-    bool ret = ds.get(key, any);
+    bool ret = anycache::getInstance().getCachedData(key, any) || 
+               ds.get(key, any);
     MASSERT(ret, errmsg);
     return any.value_as< T >();
 }
 
+class anywriterif
+{
+public:
+    anywriterif() { anycache::getInstance().registerWriter(this); };
+    virtual ~anywriterif() { anycache::getInstance().unregisterWriter(this); };
+
+    virtual std::string key() const = 0;
+    virtual dw::any val() const = 0;
+};
+
 template< typename T >
-class anywriter
+class anywriter : anywriterif
 {
 protected:
     T& m_any;
@@ -113,6 +139,15 @@ public:
     ~anywriter()
     {
         m_ds.set(m_key, dw::any(m_any));
+    }
+
+    virtual std::string key() const
+    {
+        return m_key;
+    }
+    virtual dw::any val() const
+    {
+        return dw::any(m_any);
     }
 };
 

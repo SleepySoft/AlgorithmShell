@@ -110,3 +110,46 @@ void AlgorithmShell::triggerLinkages(const LINKAGELIST& linkages)
         (*iter)();
     }
 }
+
+
+
+anycache::anycache()
+{
+
+}
+anycache::~anycache()
+{
+
+}
+
+anycache& anycache::getInstance()
+{
+    static anycache instance;
+    return instance;
+}
+
+void anycache::registerWriter(anywriterif* writer)
+{
+    m_caches.push_back(writer);
+}
+void anycache::unregisterWriter(anywriterif* writer)
+{
+    auto iter = std::find(m_caches.begin(), m_caches.end(), writer);
+    if (iter != m_caches.end())
+    {
+        m_caches.erase(iter);
+    }
+}
+bool anycache::getCachedData(const std::string& key, dw::any& any) const
+{
+    auto iter = m_caches.rbegin();
+    for (; iter != m_caches.rend(); ++iter)
+    {
+        if ((*iter)->key() == key)
+        {
+            any = (*iter)->val();
+            break;
+        }
+    }
+    return (iter != m_caches.rend());
+}
