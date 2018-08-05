@@ -26,9 +26,69 @@ ALGORITHM_LINKAGE(data_3, algorithm_test_1);
 ALGORITHM_LINKAGE(data_4, algorithm_test_1);
 
 
+//bool algorithm_nest_test_3()
+//{
+//    ALGORITHM_DEPENDS(data_x, int32_t);
+//    ALGORITHM_MANAGES(data_y, float);
+//    ALGORITHM_UPDATES(data_z, std::string);
+//
+//    // data_x set by 
+//    if ((data_x) != 100 || (data_y != 500.0f))
+//    {
+//        return false;
+//    }
+//
+//    data_y = 5000.0f;
+//    data_z = "data_z -> 3";
+//
+//    return true;
+//}
+//
+//bool algorithm_nest_test_2()
+//{
+//    ALGORITHM_DEPENDS(data_x, int32_t);
+//    ALGORITHM_UPDATES(data_y, float);
+//    ALGORITHM_UPDATES(data_z, std::string);
+//
+//    if (data_x != 100)
+//    {
+//        return false;
+//    }
+//
+//    data_y = 500.0f;
+//    data_z = "data_z -> 2";
+//
+//    return algorithm_nest_test_1();
+//}
+//
+//bool algorithm_nest_test_1()
+//{
+//    ALGORITHM_MANAGES(data_x, int32_t);
+//    ALGORITHM_UPDATES(data_y, float);
+//    ALGORITHM_UPDATES(data_z, std::string);
+//
+//    if (data_x != 50)
+//    {
+//        return false;
+//    }
+//
+//    data_x = 100;
+//    data_y = 50.0f;
+//    data_z = "data_z -> 1";
+//
+//    if (!algorithm_nest_test_2())
+//    {
+//        return false;
+//    }
+//
+//    return (data_x == 200) && (data_y == ) && (data_z == );
+//}
+
+
 TEST(algorithm_shell_test, BasicTest)
 {
     Dataset& ds = ALGSHL.getDataset();
+    ds.clear();
 
     ds.set("data_1", dw::any('a'));
     ds.set("data_2", dw::any(20));
@@ -47,6 +107,7 @@ TEST(algorithm_shell_test, BasicTest)
 TEST(algorithm_shell_test, LinkageTest)
 {
     Dataset& ds = ALGSHL.getDataset();
+    ds.clear();
 
     ds.set("data_1", dw::any('b'));
     ds.set("data_2", dw::any(240));
@@ -84,3 +145,16 @@ TEST(algorithm_shell_test, LinkageTest)
     ASSERT_TRUE(ds.check("data_c", 666.66f));
     ASSERT_TRUE(ds.check("data_d", "Successful"));
 }
+
+//TEST(algorithm_shell_test, NestCallTest)
+//{
+//    Dataset& ds = ALGSHL.getDataset();
+//
+//    ds.clear();
+//
+//    ds.set("data_x", dw::any(50));
+//    ds.set("data_y", dw::any(5.0f));
+//    ds.set("data_z", dw::any("data_z -> 0"));
+//
+//    ASSERT_TRUE(algorithm_nest_test_1());
+//}

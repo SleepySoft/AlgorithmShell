@@ -35,13 +35,13 @@
 #define ALGORITHM_LINKAGE(key, func) static alglinker __##key##_link_##func = alglinker(TOSTR(key), func, TOSTR(func));
 
 // Depends on this data. Read only. Data will be prepared when this function enteres.
-#define ALGORITHM_DEPENDS(key, type) type key = type(); key = anyloader< type >(ALGSHL.getDataset(), TOSTR(key), "Depends value '" TOSTR(key) "' missing in algorithm: " __FUNCTION__); ALGSHL.registerDepends(__FUNCTION__, TOSTR(key));
+#define ALGORITHM_DEPENDS(key, type) type key = type(); anysync< type > __as_##key(ALGSHL.getDataset(), TOSTR(key), key, true, false, __FUNCTION__); ALGSHL.registerDepends(__FUNCTION__, TOSTR(key));
 
 // Updates this data. Write only. Data will be updated when this function quit.
-#define ALGORITHM_UPDATES(key, type) type key = type(); anywriter< type > __aw_##key(ALGSHL.getDataset(), TOSTR(key), key, __FUNCTION__); ALGSHL.registerUpdates(__FUNCTION__, TOSTR(key));
+#define ALGORITHM_UPDATES(key, type) type key = type(); anysync< type > __as_##key(ALGSHL.getDataset(), TOSTR(key), key, false, true, __FUNCTION__); ALGSHL.registerUpdates(__FUNCTION__, TOSTR(key));
 
 // Manages this data. Read and Write Data will be prepared when this function enteres and updated when this function quits. 
-#define ALGORITHM_MANAGES(key, type) ALGORITHM_DEPENDS(key, type); anywriter< type > __aw_##key(ALGSHL.getDataset(), TOSTR(key), key, __FUNCTION__); ALGSHL.registerManages(__FUNCTION__, TOSTR(key));
+#define ALGORITHM_MANAGES(key, type) type key = type(); anysync< type > __as_##key(ALGSHL.getDataset(), TOSTR(key), key, true, true, __FUNCTION__); ALGSHL.registerManages(__FUNCTION__, TOSTR(key));
 
 
 typedef void(*LINKAGEFUNC)(void);
@@ -86,61 +86,105 @@ protected:
 };
 
 
-class anywriterif;
+class anysyncif;
 class anycache
 {
 protected:
-    std::vector< anywriterif* > m_caches;
+    std::vector< anysyncif* > m_caches;
 protected:
     anycache();
     ~anycache();
 public:
     static anycache& getInstance();
 public:
-    void registerWriter(anywriterif* writer);
-    void unregisterWriter(anywriterif* writer);
+    void registerWriter(const std::string& key, anysyncif* writer);
+    void unregisterWriter(anysyncif* writer);
     bool getCachedData(const std::string& key, dw::any& any) const;
+protected:
+    void syncReferenceVariant(anysyncif* sync);
 };
 
-template< typename T >
-T anyloader(Dataset& ds, std::string key, const char* errmsg)
-{
-    dw::any any;
-    bool ret = anycache::getInstance().getCachedData(key, any) || 
-               ds.get(key, any);
-    MASSERT(ret, errmsg);
-    return any.value_as< T >();
-}
+//template< typename T >
+//T anyloader(Dataset& ds, std::string key, const char* errmsg)
+//{
+//    dw::any any;
+//    bool ret = anycache::getInstance().getCachedData(key, any) || 
+//               ds.get(key, any);
+//    MASSERT(ret, errmsg);
+//    return any.value_as< T >();
+//}
 
-class anywriterif
+class anysyncif
 {
 public:
-    anywriterif() { anycache::getInstance().registerWriter(this); };
-    virtual ~anywriterif() { anycache::getInstance().unregisterWriter(this); };
+    anysyncif() { };
+    virtual ~anysyncif() { };
 
-    virtual std::string key() const = 0;
+    virtual bool r() const = 0;
+    virtual bool w() const = 0;
     virtual dw::any val() const = 0;
+    virtual std::string key() const = 0;
+    virtual bool set(const dw::any& any) = 0;
 };
 
 template< typename T >
-class anywriter : anywriterif
+class anysync : anysyncif
 {
 protected:
     T& m_any;
     Dataset& m_ds;
     std::string m_key;
+    bool m_load;
+    bool m_write;
     const char* m_algorithm;
 public:
-    anywriter(Dataset& ds, std::string key, T& any, const char* algorithm)
-        : m_any(any), m_ds(ds), m_key(key), m_algorithm(algorithm)
+    anysync(Dataset& ds, std::string key, T& any, bool _load, bool write, const char* algorithm)
+        : m_any(any), m_ds(ds), m_key(key), m_load(_load), m_write(write), m_algorithm(algorithm)
     {
-
+        if (m_load)
+        {
+            load();
+        }
+        anycache::getInstance().registerWriter(key, this);
     }
-    ~anywriter()
+    ~anysync()
     {
-        m_ds.set(m_key, dw::any(m_any));
+        if (m_write)
+        {
+            write();
+        }
+        anycache::getInstance().unregisterWriter(this);
     }
 
+    bool load()
+    {
+        dw::any any;
+        bool ret = anycache::getInstance().getCachedData(m_key, any) ||
+            m_ds.get(m_key, any);
+        if (ret)
+        {
+            m_any = any.value_as< T >();
+        }
+        else 
+        {
+            printf("Load %s as %s Fail.\n", m_key.c_str(), typeid(T).name());
+        }
+        return ret;
+    }
+
+    bool write()
+    {
+        return m_ds.set(m_key, dw::any(m_any));
+    }
+
+    virtual bool r() const
+    {
+        return m_load;
+    }
+    virtual bool w() const
+    {
+        return m_write;
+    }
     virtual std::string key() const
     {
         return m_key;
@@ -148,6 +192,16 @@ public:
     virtual dw::any val() const
     {
         return dw::any(m_any);
+    }
+    virtual bool set(const dw::any& any)
+    {
+        bool ret = false;
+        if (any.istype< T >())
+        {
+            m_any = any.value_as< T >();
+            ret = true;
+        }
+        return ret;
     }
 };
 

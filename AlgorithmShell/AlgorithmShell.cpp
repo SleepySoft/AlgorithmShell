@@ -128,16 +128,32 @@ anycache& anycache::getInstance()
     return instance;
 }
 
-void anycache::registerWriter(anywriterif* writer)
+void anycache::registerWriter(const std::string& key, anysyncif* writer)
 {
+    uint32_t wcount = 0;
+    uint32_t rcount = 0;
+
+    auto iter = m_caches.begin();
+    for (; iter != m_caches.end(); iter++)
+    {
+        if ((*iter)->key() == key)
+        {
+            wcount += (*iter)->w() ? 1 : 0;
+            rcount += (*iter)->r() ? 1 : 0;
+        }
+    }
     m_caches.push_back(writer);
 }
-void anycache::unregisterWriter(anywriterif* writer)
+void anycache::unregisterWriter(anysyncif* writer)
 {
     auto iter = std::find(m_caches.begin(), m_caches.end(), writer);
     if (iter != m_caches.end())
     {
         m_caches.erase(iter);
+    }
+    if (writer->w())
+    {
+        syncReferenceVariant(writer);
     }
 }
 bool anycache::getCachedData(const std::string& key, dw::any& any) const
@@ -152,4 +168,32 @@ bool anycache::getCachedData(const std::string& key, dw::any& any) const
         }
     }
     return (iter != m_caches.rend());
+}
+
+
+void anycache::syncReferenceVariant(anysyncif* sync)
+{
+    uint32_t rcount = 0;
+    std::string key(sync->key());
+
+    auto iter = m_caches.begin();
+    for (; iter != m_caches.end(); iter++)
+    {
+        if ((*iter)->key() == key)
+        {
+            if ((*iter)->r())
+            {
+                rcount++;
+                if (!(*iter)->set(sync->val()))
+                {
+                    printf("Warning : Type mismatch while updating previous value.\n");
+                }
+            }
+        }
+    }
+
+    if (rcount > 0)
+    {
+        printf("%s sync %d variants.\n", key.c_str(), rcount);
+    }
 }
