@@ -161,7 +161,7 @@ bool anycache::getCachedData(const std::string& key, dw::any& any) const
     auto iter = m_caches.rbegin();
     for (; iter != m_caches.rend(); ++iter)
     {
-        if ((*iter)->key() == key)
+        if ((*iter)->w() && ((*iter)->key() == key))
         {
             any = (*iter)->val();
             break;
