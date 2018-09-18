@@ -59,6 +59,11 @@ void AlgorithmShell::linkAlgorithm(LINKAGEFUNC func, std::string key)
     m_dataset.addDataObserver(key, this);
 }
 
+void AlgorithmShell::registerAlgInfo(LINKAGEFUNC func, std::string name)
+{
+    m_algInfoDict[func] = name;
+}
+
 void AlgorithmShell::onFirstData(std::string key, const dw::any& value)
 {
     (void)(key);
@@ -105,10 +110,24 @@ LINKAGELIST AlgorithmShell::getLinkedFunction(std::string key)
 
 void AlgorithmShell::triggerLinkages(const LINKAGELIST& linkages)
 {
+    static uint32_t indent = 0;
     for (auto iter = linkages.begin(); iter != linkages.end(); ++iter)
     {
+        printf("%*c|-%s\n", indent + 1, ' ', getAlgorithmName((*iter)).c_str());
+        indent += 2;
         (*iter)();
+        indent -= 2;
     }
+}
+
+std::string AlgorithmShell::getAlgorithmName(LINKAGEFUNC func)
+{
+    std::string name;
+    if (m_algInfoDict.find(func) != m_algInfoDict.end())
+    {
+        name = m_algInfoDict[func];
+    }
+    return name;
 }
 
 

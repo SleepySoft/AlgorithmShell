@@ -30,6 +30,13 @@
 //#define ALGORITHM_OUTPUT(key, type) anywriter< type > __aw_##key(ds, TOSTR(key), key, __FUNCTION__);
 //#define ALGORITHM_DECLARE(algorithm) template< class T > void algorithm(Dataset* ds)
 
+#define ALGORITHM_GET(key, type) type key(ALGSHL.getDataset().get(TOSTR(key)).value_as< type >());
+#define ALGORITHM_SET(key, value) ALGSHL.getDataset().set(TOSTR(key), dw::any(value));
+#define ALGORITHM_TSET(key, type, value) ALGSHL.getDataset().set(TOSTR(key), dw::any((type)(value)));
+
+// Use in a function to make the update do not trigger the linkage.
+#define ALGORITHM_SILENCE algsilence __algsilence();
+
 // If the algorithm has parameters, please use std::bind to provide a NO-PARAM function.
 // MUST placed after function declaration.
 #define ALGORITHM_LINKAGE(key, func) static alglinker __##key##_link_##func = alglinker(TOSTR(key), func, TOSTR(func));
@@ -47,6 +54,7 @@
 typedef void(*LINKAGEFUNC)(void);
 typedef std::vector< LINKAGEFUNC > LINKAGELIST;
 typedef std::map< std::string, LINKAGELIST > LINKAGEDICT;
+typedef std::map< LINKAGEFUNC, std::string > ALGINFODICT;
 
 
 class AlgorithmShell : public IDataObserver
@@ -54,6 +62,7 @@ class AlgorithmShell : public IDataObserver
 protected:
     Dataset m_dataset;
     bool m_linkageEnable;
+    ALGINFODICT m_algInfoDict;
     LINKAGEDICT m_algLinkageDict;
 
 protected:
@@ -75,6 +84,8 @@ public:
     void registerManages(std::string alg, std::string key) { };
     void registerLinkage(std::string alg, std::string key) { };
 
+    void registerAlgInfo(LINKAGEFUNC func, std::string name);
+
 public:
     virtual void onFirstData(std::string key, const dw::any& value);
     virtual void onDataChanged(std::string key, const dw::any& value);
@@ -83,6 +94,8 @@ public:
 protected:
     LINKAGELIST getLinkedFunction(std::string key);
     void triggerLinkages(const LINKAGELIST& linkages);
+
+    std::string getAlgorithmName(LINKAGEFUNC func);
 };
 
 
@@ -114,6 +127,16 @@ protected:
 //    return any.value_as< T >();
 //}
 
+template <typename T, typename R, typename = R>
+struct equality_d : std::false_type {};
+
+template <typename T, typename R>
+struct equality_d<T, R, decltype(std::declval<T>() == std::declval<T>())>
+    : std::true_type {};
+
+template<typename T, typename R = bool>
+struct equality : equality_d<T, R> {};
+
 class anysyncif
 {
 public:
@@ -137,6 +160,7 @@ protected:
     bool m_load;
     bool m_write;
     const char* m_algorithm;
+    static const T m_defaultVal;
 public:
     anysync(Dataset& ds, std::string key, T& any, bool _load, bool write, const char* algorithm)
         : m_any(any), m_ds(ds), m_key(key), m_load(_load), m_write(write), m_algorithm(algorithm)
@@ -151,6 +175,7 @@ public:
     {
         if (m_write)
         {
+            warning();
             write();
         }
         anycache::getInstance().unregisterWriter(this);
@@ -203,19 +228,45 @@ public:
         }
         return ret;
     }
+
+    void warning()
+    {
+        if ((!m_load) && memcmp(&m_any, &m_defaultVal, sizeof(T) == 0))
+        {
+            printf("Warning: ALGORITHM_UPDATES(%s) in %s is still default value.\n", m_key.c_str(), m_algorithm);
+        }
+    }
 };
+
+template< typename T >
+const T anysync< T >::m_defaultVal = T();
 
 class alglinker
 {
 public:
-    alglinker(std::string key, LINKAGEFUNC func, const char* algorithm)
+    alglinker(std::string key, LINKAGEFUNC func, const char* name)
     {
         ALGSHL.linkAlgorithm(func, key);
-        ALGSHL.registerLinkage(algorithm, key);
+        ALGSHL.registerLinkage(name, key);
+        ALGSHL.registerAlgInfo(func, name);
     }
     ~alglinker()
     {
 
+    }
+};
+
+
+class algsilence
+{
+public:
+    algsilence()
+    {
+        ALGSHL.enableLinkage(false);
+    }
+    ~algsilence()
+    {
+        ALGSHL.enableLinkage(true);
     }
 };
 
