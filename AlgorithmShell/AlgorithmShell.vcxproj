@@ -123,11 +123,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AlgorithmShell.cpp" />
+    <ClCompile Include="AlgorithmSimulation.cpp" />
     <ClCompile Include="AlgorithmStatistics.cpp" />
     <ClCompile Include="Dataset\dataset.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlgorithmShell.h" />
+    <ClInclude Include="AlgorithmSimulation.h" />
     <ClInclude Include="AlgorithmStatistics.h" />
     <ClInclude Include="Dataset\ambiguous.h" />
     <ClInclude Include="Dataset\dataset.h" />

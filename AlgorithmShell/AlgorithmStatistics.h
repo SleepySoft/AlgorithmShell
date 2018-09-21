@@ -15,6 +15,11 @@
 #define STATISTICS_TEXTSTR ALGSTATS.getStatisticText()
 #define STATISTICS_TEXTRAW ALGSTATS.getStatisticText().c_str()
 
+#define STATISTICS_DUMP2FILE(path) {\
+    std::string text(ALGSTATS.getStatisticText());\
+    FILE* file = fopen(path, "wt");\
+    if (file != NULL) { fwrite(text.c_str(), 1, text.size(), file); fclose(file); } }
+
 
 class AlgorithmStatistics
 {

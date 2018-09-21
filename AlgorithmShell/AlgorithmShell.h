@@ -50,6 +50,8 @@
 // Manages this data. Read and Write Data will be prepared when this function enteres and updated when this function quits. 
 #define ALGORITHM_MANAGES(key, type) type key = type(); anysync< type > __as_##key(ALGSHL.getDataset(), TOSTR(key), key, true, true, __FUNCTION__); ALGSHL.registerManages(__FUNCTION__, TOSTR(key));
 
+// Discard updates and manages
+#define ALGORITHM_DISCARD(key) __as_##key.discard()
 
 typedef void(*LINKAGEFUNC)(void);
 typedef std::vector< LINKAGEFUNC > LINKAGELIST;
@@ -200,6 +202,11 @@ public:
     bool write()
     {
         return m_ds.set(m_key, dw::any(m_any));
+    }
+
+    void discard()
+    {
+        m_write = false;
     }
 
     virtual bool r() const
